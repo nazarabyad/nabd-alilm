@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f5c4d">
+<link rel="manifest" href="manifest.json">
+<title>مدرسة نبض العلم الخاصة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eef3f1;--card:#fff;--ink:#14302b;--mut:#5d7570;--pri:#0f5c4d;--on:#fff;--line:#dbe6e2;--acc:#e0a526;--bad:#b3392f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1b18;--card:#162824;--ink:#e6f1ee;--mut:#93aaa4;--pri:#3fae96;--on:#08201a;--line:#27403a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Tajawal,system-ui,sans-serif;padding:14px 14px 90px;max-width:520px;margin-inline:auto}
+h1{font-size:22px;font-weight:800;margin:6px 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:12px}
+h2{font-size:17px;margin:0 0 10px}
+input,textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:8px}
+input[type=checkbox]{width:22px;height:22px;margin:0;padding:0;flex:none;accent-color:var(--pri)}
+.btn{width:100%;font:inherit;font-weight:700;border:0;border-radius:10px;padding:12px;background:var(--pri);color:var(--on)}
+.btn:disabled{opacity:.5}
+.btn.wa{background:#1fa855;color:#fff}.btn.del{background:none;color:var(--bad);border:1px solid var(--line)}.btn.sm{width:auto;padding:8px 14px}.btn.off{background:var(--line);color:var(--mut)}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.st{border-top:1px solid var(--line);padding:12px 0}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.grow{flex:1}.ck{display:flex;align-items:center;gap:10px;font-weight:700}
+.code{font-size:12px;color:var(--mut)}
+.chip{font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;color:#fff;white-space:nowrap}
+.l0{background:#1e8e5a}.l1{background:#2a7bb5}.l2{background:#7a8a2e}.l3{background:#c0562f}
+.rep{border-inline-start:3px solid var(--acc);padding:4px 10px;margin:8px 0}
+.rep small{color:var(--mut)}
+.empty{color:var(--mut);text-align:center;padding:10px}
+.hero{background:var(--pri);color:var(--on);border-radius:14px;padding:18px}
+.hero h2{margin:0 0 4px;font-size:20px}
+.hint{font-size:13px;color:var(--mut);margin:6px 0 0}
+#bar{position:fixed;inset-inline:0;bottom:0;max-width:520px;margin-inline:auto;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--line)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<h1>🏫 مدرسة نبض العلم الخاصة</h1>
+<div id="out" hidden style="margin-bottom:6px"><button class="btn sm del" onclick="logout()">تسجيل الخروج</button></div>
+<div id="lg"></div>
+<div id="m" hidden><div id="mt"></div><div id="cp"></div>
+<input id="q" placeholder="🔍 بحث باسم الطالب أو الصف" style="margin-top:12px;margin-bottom:0" oninput="renderL()"><div id="ls"></div>
+<div id="bar" hidden><button class="btn" onclick="openC()">✉ إرسال رسالة (<span id="bn">0</span>)</button></div></div>
+<div id="p" hidden></div>
+
+<script type="module">
+import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import {getFirestore,collection,doc,getDoc,getDocs,onSnapshot,updateDoc,deleteDoc,addDoc,query,where,arrayUnion} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+// ===== ضع هنا إعدادات مشروعك من Firebase (Project settings ← Your apps) =====
+const firebaseConfig={apiKey:'AIzaSyAs7PQr7NJ988gTD2h05WYBUaiyz0iJBA8',authDomain:'nazar-d9943.firebaseapp.com',projectId:'nazar-d9943',appId:'1:851313805632:web:afb06ca756927ee7dc52a5'};
+// ===========================================================================
+
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),sec=initializeApp(firebaseConfig,'sec');
+const LV=['ممتاز','جيد جدا','جيد','يحتاج دعماً إضافياً'];
+let S=[],MS=[],P=null,sel={},form=false,comp=false,C=null,done={},open=-1,lerr='',nw=null,un=[];
+const $=i=>document.getElementById(i),TD=()=>new Date().toISOString().slice(0,10);
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fd=v=>new Date(v+'T00:00').toLocaleDateString('ar',{weekday:'long',day:'numeric',month:'long'});
+const wl=(ph,m)=>window.open('https://wa.me/'+ph+'?text='+encodeURIComponent(m),'_blank');
+const show=x=>{['m','p'].forEach(k=>$(k).hidden=k!==x);$('lg').hidden=!!x;$('out').hidden=!x};
+const stop=()=>{un.forEach(f=>f());un=[]};
+const W=o=>Object.assign(window,o);
+const ALPHA='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const norm=c=>String(c).toUpperCase().replace(/[^A-Z0-9]/g,'');
+const pmail=c=>norm(c).toLowerCase()+'@parents.nabd.school';
+function genCode(){const b=new Uint8Array(8);crypto.getRandomValues(b);let c='';for(const x of b)c+=ALPHA[x%ALPHA.length];return c.slice(0,4)+'-'+c.slice(4)}
+async function mkParent(){const code=genCode(),sa=getAuth(sec),cr=await createUserWithEmailAndPassword(sa,pmail(code),norm(code));await signOut(sa);return{code,uid:cr.user.uid}}
+
+/* ---------- الدخول ---------- */
+function renderLG(){$('lg').innerHTML=`<div class="card" style="margin-top:0"><h2>تسجيل الدخول</h2><input id="lu" placeholder="كود الطالب (أو البريد الإلكتروني للمدير)" autocomplete="off"><input id="lp" type="password" placeholder="كلمة المرور (للمدير فقط)"><button class="btn" id="lb" onclick="doLogin()">دخول</button>${lerr?`<p class="hint" style="color:var(--bad)">${lerr}</p>`:''}</div>`}
+async function doLogin(){const u=$('lu').value.trim(),pw=$('lp').value;if(!u)return;lerr='';$('lb').disabled=true;
+ try{if(pw)await signInWithEmailAndPassword(auth,u,pw);else await signInWithEmailAndPassword(auth,pmail(u),norm(u))}
+ catch(e){lerr=e.code==='auth/too-many-requests'?'محاولات كثيرة، حاول لاحقاً':'بيانات الدخول غير صحيحة';renderLG()}}
+async function logout(){await signOut(auth)}
+onAuthStateChanged(auth,async u=>{stop();sel={};comp=false;C=null;open=-1;nw=null;
+ if(!u){show(null);renderLG();return}
+ const a=await getDoc(doc(db,'admins',u.uid));
+ if(a.exists())return startAdmin();
+ const q=await getDocs(query(collection(db,'students'),where('parentUid','==',u.uid)));
+ if(!q.empty)return startParent(q.docs[0].id,u.uid);
+ await signOut(auth);lerr='هذا الحساب غير مصرح له';renderLG()});
+
+/* ---------- المدير ---------- */
+function startAdmin(){show('m');renderT();
+ un.push(onSnapshot(collection(db,'students'),s=>{S=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,'ar'));if(document.activeElement?.id!=='nt')renderL()}))}
+function renderT(){let h=`<button class="btn" onclick="tf()">${form?'إغلاق':'＋ إضافة طالب'}</button>`;
+ if(form)h+=`<div class="card"><input id="n" placeholder="اسم الطالب"><input id="cl" placeholder="الصف، مثل: الثالث"><input id="ph" inputmode="tel" placeholder="رقم واتساب الوالد، مثل 249912345678"><button class="btn" id="ab" onclick="add()">حفظ الطالب</button></div>`;
+ if(nw)h+=`<div class="card"><h2>كود ولي أمر ${esc(nw.name)}</h2><div style="font-size:24px;font-weight:800;letter-spacing:2px;direction:ltr;text-align:center">${esc(nw.code)}</div><p class="hint">يظهر مرة واحدة فقط. أرسله للوالد الآن، وإن ضاع اضغط "كود جديد".</p><div class="row"><button class="btn wa" onclick="sendCode()">إرسال الكود للوالد</button><button class="btn off" onclick="hideNw()">إخفاء</button></div></div>`;
+ $('mt').innerHTML=h}
+const vis=s=>{const q=$('q').value.trim();return !q||s.name.includes(q)||s.cls.includes(q)};
+function renderL(){let k=0,h=`<div class="card"><div class="top"><label class="ck"><input type="checkbox" id="all" onchange="selAll(this.checked)">تحديد الكل</label><span class="code" id="cnt"></span></div>`;
+ S.forEach((s,i)=>{if(!vis(s))return;k++;const lv=s.level??2,ab=(s.att||{})[TD()];
+  h+=`<div class="st"><div class="top"><input type="checkbox" class="cb" data-c="${s.id}" ${sel[s.id]?'checked':''} onchange="pick(this)"><div class="grow" onclick="tg(${i})"><b>${esc(s.name)}</b><div class="code">${esc(s.cls)}${ab?' · 🔴 غائب اليوم':''}</div></div><span class="chip l${lv}" onclick="tg(${i})">${LV[lv]}</span></div>`;
+  if(open===i)h+=`<div style="margin-top:8px"><textarea id="nt" rows="2" placeholder="ملاحظة عن الطالب (اختياري)"></textarea><select id="rl">${LV.map((l,j)=>`<option value="${j}" ${j===lv?'selected':''}>${l}</option>`).join('')}</select><div class="row"><button class="btn" onclick="rep(${i})">حفظ</button><button class="btn" style="background:var(--bad);color:#fff" onclick="absent(${i})">غائب اليوم</button></div><div class="code" style="margin-top:10px">واتساب: ${esc(s.phone)}</div><div class="row" style="margin-top:8px"><button class="btn off" onclick="regen(${i})">كود جديد</button><button class="btn del" onclick="del(${i})">حذف</button></div></div>`;
+  h+='</div>'});
+ if(!k)h+=`<div class="empty">${S.length?'لا توجد نتائج':'اضغط "إضافة طالب" لبدء القائمة'}</div>`;
+ $('ls').innerHTML=h+'</div>';updC()}
+function updC(){const n=Object.keys(sel).filter(k=>sel[k]).length;$('cnt').textContent=n+' محدد';$('bar').hidden=!n;$('bn').textContent=n;
+ const V=S.filter(vis);$('all').checked=V.length>0&&V.every(s=>sel[s.id])}
+const tf=()=>{form=!form;renderT()},pick=el=>{sel[el.dataset.c]=el.checked;updC()},tg=i=>{open=open===i?-1:i;renderL()};
+function selAll(v){S.forEach(s=>{if(vis(s))sel[s.id]=v});document.querySelectorAll('.cb').forEach(c=>c.checked=v);updC()}
+async function add(){const n=$('n').value.trim(),cl=$('cl').value.trim(),ph=$('ph').value.replace(/\D/g,'');
+ if(!n||!cl||ph.length<8){alert('اكتب اسم الطالب والصف ورقم الوالد (مع رمز الدولة)');return}
+ $('ab').disabled=true;
+ try{const r=await mkParent();await addDoc(collection(db,'students'),{name:n,cls:cl,phone:ph,level:2,reports:[],att:{},parentUid:r.uid});nw={name:n,phone:ph,code:r.code};form=false;renderT();scrollTo(0,0)}
+ catch(e){alert('تعذّر الحفظ: '+(e.message||''));$('ab').disabled=false}}
+const sendCode=()=>wl(nw.phone,`السلام عليكم، تم تسجيل ابنكم ${nw.name} في تطبيق مدرسة نبض العلم الخاصة.\nكود الدخول: ${nw.code}\nالتطبيق: ${location.origin}${location.pathname}`);
+async function regen(i){if(!confirm('إنشاء كود جديد؟ الكود القديم سيتوقف.'))return;
+ try{const r=await mkParent();await updateDoc(doc(db,'students',S[i].id),{parentUid:r.uid});nw={name:S[i].name,phone:S[i].phone,code:r.code};renderT();scrollTo(0,0)}catch(e){alert('تعذّر: '+(e.message||''))}}
+async function rep(i){const s=S[i],t=$('nt').value.trim(),l=+$('rl').value,u={level:l};if(t)u.reports=arrayUnion({ts:Date.now(),t,l});
+ await updateDoc(doc(db,'students',s.id),u);
+ if(l===3&&confirm('إرسال إشعار للوالد الآن؟'))wl(s.phone,`السلام عليكم، والد الطالب ${s.name}\n⚠ إشعار مهم\nمستوى الطالب: ${LV[l]}${t?'\nالملاحظة: '+t:''}\nنرجو التواصل مع المدرسة.\n- إدارة مدرسة نبض العلم الخاصة`)}
+async function absent(i){const s=S[i];if((s.att||{})[TD()]){alert('سُجّل غياب اليوم مسبقاً');return}
+ await updateDoc(doc(db,'students',s.id),{['att.'+TD()]:'غائب'});
+ wl(s.phone,`السلام عليكم، والد الطالب ${s.name}\n⚠ إشعار غياب\nالطالب غائب اليوم عن المدرسة، نرجو إفادتنا بالسبب.\n- إدارة مدرسة نبض العلم الخاصة`)}
+async function del(i){if(confirm('حذف '+S[i].name+'؟')){delete sel[S[i].id];open=-1;await deleteDoc(doc(db,'students',S[i].id))}}
+
+/* ---------- الرسائل الجماعية ---------- */
+const openC=()=>{comp=true;C=null;done={};renderC();scrollTo(0,0)},closeC=()=>{comp=false;renderC()},tm=el=>{$('mf').hidden=!el.checked};
+function renderC(){if(!comp){$('cp').innerHTML='';return}
+ let h='<div class="card">';
+ if(!C)h+=`<h2>رسالة لأولياء الأمور</h2><textarea id="gm" rows="3" placeholder="نص الرسالة (اختياري إذا أضفت اجتماعاً)"></textarea><label class="ck" style="margin-bottom:8px"><input type="checkbox" id="mc" onchange="tm(this)">إضافة دعوة لاجتماع</label><div id="mf" hidden><input id="mti" value="اجتماع أولياء الأمور"><div class="row"><input id="md" type="date"><input id="mh" type="time"></div><input id="mp" placeholder="المكان (مثل: قاعة المدرسة)"></div><div class="row"><button class="btn" onclick="prep()">تجهيز الرسائل</button><button class="btn del" onclick="closeC()">إلغاء</button></div>`;
+ else{const L=S.filter(s=>sel[s.id]);
+  h+=`<h2>إرسال إلى ${L.length} من أولياء الأمور</h2><p class="hint" style="margin:0 0 6px">واتساب يفتح محادثة واحدة في كل مرة، فاضغط إرسال بجانب كل اسم.</p>`;
+  L.forEach(s=>{h+=`<div class="st"><div class="top"><b>والد ${esc(s.name)}</b><button class="btn sm ${done[s.id]?'off':'wa'}" onclick="sendQ('${s.id}')">${done[s.id]?'✓ تم':'إرسال'}</button></div></div>`});
+  h+='<button class="btn" style="margin-top:10px" onclick="closeC()">إنهاء</button>'}
+ $('cp').innerHTML=h+'</div>'}
+async function prep(){const t=$('gm').value.trim(),mc=$('mc').checked;
+ if(!t&&!mc){alert('اكتب نص الرسالة أو أضف اجتماعاً');return}
+ C={t,mc};if(mc){const d=$('md').value,h=$('mh').value;if(!d||!h){alert('حدد تاريخ الاجتماع ووقته');C=null;return}
+  C.ti=$('mti').value.trim()||'اجتماع أولياء الأمور';C.d=d;C.h=h;C.p=$('mp').value.trim()}
+ await addDoc(collection(db,'messages'),{ts:Date.now(),t,toUids:S.filter(x=>sel[x.id]).map(x=>x.parentUid),mt:mc?{ti:C.ti,d:C.d,h:C.h,p:C.p}:null});renderC()}
+function sendQ(id){const s=S.find(x=>x.id===id);let m=`السلام عليكم، والد الطالب ${s.name}\n`;if(C.t)m+=C.t+'\n';
+ if(C.mc)m+=`\nدعوة: ${C.ti}\nالتاريخ: ${fd(C.d)}\nالوقت: ${C.h}${C.p?'\nالمكان: '+C.p:''}\n`;
+ done[id]=1;wl(s.phone,m+'\n- إدارة مدرسة نبض العلم الخاصة');renderC()}
+
+/* ---------- ولي الأمر ---------- */
+function startParent(sid,uid){show('p');
+ un.push(onSnapshot(doc(db,'students',sid),d=>{P=d.exists()?d.data():null;renderP()}));
+ un.push(onSnapshot(query(collection(db,'messages'),where('toUids','array-contains',uid)),s=>{MS=s.docs.map(d=>d.data()).sort((a,b)=>b.ts-a.ts);renderP()}))}
+function renderP(){if(!P){$('p').innerHTML='<div class="card"><div class="empty">جارٍ التحميل…</div></div>';return}
+ const lv=P.level??2,ab=P.att||{},mo=TD().slice(0,7),ad=Object.keys(ab).filter(d=>d.startsWith(mo)).sort(),up=MS.filter(m=>m.mt&&m.mt.d>=TD()),rp=(P.reports||[]).slice().reverse();
+ let h=`<div class="hero"><h2>${esc(P.name)}</h2><div>الصف: ${esc(P.cls)}</div><div style="margin-top:8px">المستوى الحالي: <b>${LV[lv]}</b>${ab[TD()]?' · غائب اليوم':''}</div></div>`;
+ if(up.length)h+=`<div class="card"><h2>اجتماعات قادمة</h2>${up.map(m=>`<div class="rep"><b>${esc(m.mt.ti)}</b><div>${esc(fd(m.mt.d))} · ${esc(m.mt.h)}</div>${m.mt.p?`<small>${esc(m.mt.p)}</small>`:''}</div>`).join('')}</div>`;
+ if(ad.length)h+=`<div class="card"><h2>الغياب هذا الشهر: ${ad.length}</h2><div class="code">${ad.map(d=>esc(fd(d))).join('، ')}</div></div>`;
+ if(rp.length)h+=`<div class="card"><h2>ملاحظات المدرسة</h2>${rp.map(x=>`<div class="rep"><small>${esc(new Date(x.ts).toLocaleDateString('ar'))} · ${LV[x.l]}</small><div>${esc(x.t)}</div></div>`).join('')}</div>`;
+ h+=`<div class="card"><h2>رسائل المدرسة</h2>${MS.length?MS.map(m=>`<div class="rep"><small>${esc(new Date(m.ts).toLocaleDateString('ar'))}</small><div>${esc(m.t||(m.mt?'دعوة: '+m.mt.ti:''))}</div></div>`).join(''):'<div class="empty">لا توجد رسائل بعد</div>'}</div>`;
+ $('p').innerHTML=h}
+
+W({doLogin,logout,renderL,selAll,pick,tg,tf,add,sendCode,regen,rep,absent,del,openC,closeC,tm,prep,sendQ,renderT,hideNw:()=>{nw=null;renderT()}});
+renderLG();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
