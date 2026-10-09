@@ -62,7 +62,8 @@ let S=[],MS=[],P=null,sel={},form=false,comp=false,C=null,done={},open=-1,lerr='
 const $=i=>document.getElementById(i),TD=()=>new Date().toISOString().slice(0,10);
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fd=v=>new Date(v+'T00:00').toLocaleDateString('ar',{weekday:'long',day:'numeric',month:'long'});
-const wl=(ph,m)=>window.open('https://wa.me/'+ph+'?text='+encodeURIComponent(m),'_blank');
+const phn=x=>{const raw=String(x).trim(),d=raw.replace(/\D/g,'');if(raw.startsWith('+'))return d;if(d.startsWith('00'))return d.slice(2);if(d.startsWith('0'))return '249'+d.slice(1);if(d.length===9)return '249'+d;return d};
+const wl=(ph,m)=>window.open('https://wa.me/'+phn(ph)+'?text='+encodeURIComponent(m),'_blank');
 const show=x=>{['m','p'].forEach(k=>$(k).hidden=k!==x);$('lg').hidden=!!x;$('out').hidden=!x};
 const stop=()=>{un.forEach(f=>f());un=[]};
 const W=o=>Object.assign(window,o);
@@ -73,7 +74,7 @@ function genCode(){const b=new Uint8Array(8);crypto.getRandomValues(b);let c='';
 async function mkParent(){const code=genCode(),sa=getAuth(sec),cr=await createUserWithEmailAndPassword(sa,pmail(code),norm(code));await signOut(sa);return{code,uid:cr.user.uid}}
 
 /* ---------- الدخول ---------- */
-function renderLG(){$('lg').innerHTML=`<div class="card" style="margin-top:0"><h2>تسجيل الدخول</h2><input id="lu" placeholder="كود الطالب (أو البريد الإلكتروني للمدير)" autocomplete="off"><input id="lp" type="password" placeholder="كلمة المرور (للمدير فقط)"><button class="btn" id="lb" onclick="doLogin()">دخول</button>${lerr?`<p class="hint" style="color:var(--bad)">${lerr}</p>`:''}<p class="hint" style="text-align:center">النسخة 3</p></div>`}
+function renderLG(){$('lg').innerHTML=`<div class="card" style="margin-top:0"><h2>تسجيل الدخول</h2><input id="lu" placeholder="كود الطالب (أو البريد الإلكتروني للمدير)" autocomplete="off"><input id="lp" type="password" placeholder="كلمة المرور (للمدير فقط)"><button class="btn" id="lb" onclick="doLogin()">دخول</button>${lerr?`<p class="hint" style="color:var(--bad)">${lerr}</p>`:''}<p class="hint" style="text-align:center">النسخة 4</p></div>`}
 async function doLogin(){const u=$('lu').value.trim(),pw=$('lp').value;if(!u)return;lerr='';$('lb').disabled=true;
  try{if(pw)await signInWithEmailAndPassword(auth,u,pw);else await signInWithEmailAndPassword(auth,pmail(u),norm(u))}
  catch(e){const M={'auth/too-many-requests':'محاولات كثيرة، حاول لاحقاً','auth/invalid-credential':'البريد أو كلمة المرور أو الكود غير صحيح','auth/wrong-password':'كلمة المرور غير صحيحة','auth/user-not-found':'الحساب غير موجود','auth/invalid-email':'صيغة البريد غير صحيحة','auth/operation-not-allowed':'الدخول بالبريد غير مفعّل في Firebase','auth/invalid-api-key':'مفتاح apiKey غير صحيح','auth/api-key-not-valid.-please-pass-a-valid-api-key.':'مفتاح apiKey غير صحيح','auth/network-request-failed':'تحقق من الاتصال بالإنترنت'};lerr=(M[e.code]||'تعذّر الدخول')+`<br><small dir="ltr">${esc(e.code||e.message)}</small>`;renderLG()}}
@@ -90,7 +91,7 @@ onAuthStateChanged(auth,async u=>{stop();sel={};comp=false;C=null;open=-1;nw=nul
 function startAdmin(){show('m');renderT();
  un.push(onSnapshot(collection(db,'students'),s=>{S=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,'ar'));if(document.activeElement?.id!=='nt')renderL()}))}
 function renderT(){let h=`<button class="btn" onclick="tf()">${form?'إغلاق':'＋ إضافة طالب'}</button>`;
- if(form)h+=`<div class="card"><input id="n" placeholder="اسم الطالب"><input id="cl" placeholder="الصف، مثل: الثالث"><input id="ph" inputmode="tel" placeholder="رقم واتساب الوالد، مثل 249912345678"><button class="btn" id="ab" onclick="add()">حفظ الطالب</button></div>`;
+ if(form)h+=`<div class="card"><input id="n" placeholder="اسم الطالب"><input id="cl" placeholder="الصف، مثل: الثالث"><input id="ph" inputmode="tel" placeholder="رقم واتساب الوالد، مثل 0912345678"><button class="btn" id="ab" onclick="add()">حفظ الطالب</button></div>`;
  if(nw)h+=`<div class="card"><h2>كود ولي أمر ${esc(nw.name)}</h2><div style="font-size:24px;font-weight:800;letter-spacing:2px;direction:ltr;text-align:center">${esc(nw.code)}</div><p class="hint">يظهر مرة واحدة فقط. أرسله للوالد الآن، وإن ضاع اضغط "كود جديد".</p><div class="row"><button class="btn wa" onclick="sendCode()">إرسال الكود للوالد</button><button class="btn off" onclick="hideNw()">إخفاء</button></div></div>`;
  $('mt').innerHTML=h}
 const vis=s=>{const q=$('q').value.trim();return !q||s.name.includes(q)||s.cls.includes(q)};
@@ -105,8 +106,8 @@ function updC(){const n=Object.keys(sel).filter(k=>sel[k]).length;$('cnt').textC
  const V=S.filter(vis);$('all').checked=V.length>0&&V.every(s=>sel[s.id])}
 const tf=()=>{form=!form;renderT()},pick=el=>{sel[el.dataset.c]=el.checked;updC()},tg=i=>{open=open===i?-1:i;renderL()};
 function selAll(v){S.forEach(s=>{if(vis(s))sel[s.id]=v});document.querySelectorAll('.cb').forEach(c=>c.checked=v);updC()}
-async function add(){const n=$('n').value.trim(),cl=$('cl').value.trim(),ph=$('ph').value.replace(/\D/g,'');
- if(!n||!cl||ph.length<8){alert('اكتب اسم الطالب والصف ورقم الوالد (مع رمز الدولة)');return}
+async function add(){const n=$('n').value.trim(),cl=$('cl').value.trim(),ph=phn($('ph').value);
+ if(!n||!cl||ph.length<8){alert('اكتب اسم الطالب والصف ورقم الوالد');return}
  $('ab').disabled=true;
  try{const r=await mkParent();await addDoc(collection(db,'students'),{name:n,cls:cl,phone:ph,level:2,reports:[],att:{},parentUid:r.uid});nw={name:n,phone:ph,code:r.code};form=false;renderT();scrollTo(0,0)}
  catch(e){alert('تعذّر الحفظ: '+(e.message||''));$('ab').disabled=false}}
