@@ -42,15 +42,17 @@ input[type=checkbox]{width:22px;height:22px;margin:0;padding:0;flex:none;accent-
 <h1>🏫 مؤسسة نورا التعليمية الخاصة</h1>
 <div id="out" hidden style="margin-bottom:6px"><button class="btn sm del" onclick="logout()">تسجيل الخروج</button></div>
 <div id="lg"></div>
-<div id="m" hidden><div id="mt"></div><div id="cp"></div>
+<div id="m" hidden><div id="mt"></div><div id="cp"></div><div id="py"></div>
 <input id="q" placeholder="🔍 بحث باسم الطالب أو الصف" style="margin-top:12px;margin-bottom:0" oninput="renderL()"><div id="ls"></div>
 <div id="bar" hidden><button class="btn" onclick="openC()">✉ إرسال رسالة (<span id="bn">0</span>)</button></div></div>
 <div id="p" hidden></div>
 
+<div id="ov" hidden style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px"><div id="ovt" style="color:#fff;margin-bottom:8px"></div><img id="ovi" alt="" style="max-width:100%;max-height:78vh;border-radius:10px"><button class="btn" style="margin-top:12px;max-width:240px" onclick="closeOv()">إغلاق</button></div>
+<div id="fm" hidden style="position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto"><div class="card" style="width:100%;max-width:480px;margin:0"><h2 id="fmt"></h2><input id="fa" placeholder="المبلغ المطلوب (مثل: 50000 جنيه)"><input id="fb" placeholder="اسم البنك أو التطبيق (مثل: بنكك)"><input id="fc" inputmode="numeric" placeholder="رقم الحساب"><input id="fh" placeholder="اسم صاحب الحساب"><input id="fn" placeholder="ملاحظة (اختياري)"><div class="row"><button class="btn wa" onclick="feeSend()">إرسال لولي الأمر</button><button class="btn del" onclick="feeClose()">إلغاء</button></div></div></div>
 <script type="module">
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import {getFirestore,collection,doc,getDoc,getDocs,onSnapshot,updateDoc,deleteDoc,addDoc,query,where,arrayUnion} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import {getFirestore,collection,doc,getDoc,getDocs,onSnapshot,updateDoc,deleteDoc,addDoc,setDoc,query,where,arrayUnion} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 // ===== ضع هنا إعدادات مشروعك من Firebase (Project settings ← Your apps) =====
 const firebaseConfig={apiKey:'AIzaSyAs7PQr7NJ988gTD2hO5WYBUaiyzOiJBA8',authDomain:'nazar-d9943.firebaseapp.com',projectId:'nazar-d9943',appId:'1:851313805632:web:afb06ca756927ee7dc52a5'};
@@ -74,7 +76,7 @@ function genCode(){const b=new Uint8Array(8);crypto.getRandomValues(b);let c='';
 async function mkParent(){const code=genCode(),sa=getAuth(sec),cr=await createUserWithEmailAndPassword(sa,pmail(code),norm(code));await signOut(sa);return{code,uid:cr.user.uid}}
 
 /* ---------- الدخول ---------- */
-function renderLG(){$('lg').innerHTML=`<div class="card" style="margin-top:0"><h2>تسجيل الدخول</h2><input id="lu" placeholder="كود الطالب (أو البريد الإلكتروني للمدير)" autocomplete="off"><input id="lp" type="password" placeholder="كلمة المرور (للمدير فقط)"><button class="btn" id="lb" onclick="doLogin()">دخول</button>${lerr?`<p class="hint" style="color:var(--bad)">${lerr}</p>`:''}<p class="hint" style="text-align:center">النسخة 5</p></div>`}
+function renderLG(){$('lg').innerHTML=`<div class="card" style="margin-top:0"><h2>تسجيل الدخول</h2><input id="lu" placeholder="كود الطالب (أو البريد الإلكتروني للمدير)" autocomplete="off"><input id="lp" type="password" placeholder="كلمة المرور (للمدير فقط)"><button class="btn" id="lb" onclick="doLogin()">دخول</button>${lerr?`<p class="hint" style="color:var(--bad)">${lerr}</p>`:''}<p class="hint" style="text-align:center">النسخة 9</p></div>`}
 async function doLogin(){const u=$('lu').value.trim(),pw=$('lp').value;if(!u)return;lerr='';$('lb').disabled=true;
  try{if(pw)await signInWithEmailAndPassword(auth,u,pw);else await signInWithEmailAndPassword(auth,pmail(u),norm(u))}
  catch(e){const M={'auth/too-many-requests':'محاولات كثيرة، حاول لاحقاً','auth/invalid-credential':'البريد أو كلمة المرور أو الكود غير صحيح','auth/wrong-password':'كلمة المرور غير صحيحة','auth/user-not-found':'الحساب غير موجود','auth/invalid-email':'صيغة البريد غير صحيحة','auth/operation-not-allowed':'الدخول بالبريد غير مفعّل في Firebase','auth/invalid-api-key':'مفتاح apiKey غير صحيح','auth/api-key-not-valid.-please-pass-a-valid-api-key.':'مفتاح apiKey غير صحيح','auth/network-request-failed':'تحقق من الاتصال بالإنترنت'};lerr=(M[e.code]||'تعذّر الدخول')+`<br><small dir="ltr">${esc(e.code||e.message)}</small>`;renderLG()}}
@@ -88,9 +90,9 @@ onAuthStateChanged(auth,async u=>{stop();sel={};comp=false;C=null;open=-1;nw=nul
  await signOut(auth);lerr='هذا الحساب غير مصرح له';renderLG()});
 
 /* ---------- المدير ---------- */
-function startAdmin(){show('m');renderT();
+function startAdmin(){show('m');renderT();un.push(onSnapshot(collection(db,'payments'),q=>{PY=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.ts-a.ts);if(!form)renderT();if(payOpen)renderPayAdmin()}));
  un.push(onSnapshot(collection(db,'students'),s=>{S=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name,'ar'));if(document.activeElement?.id!=='nt')renderL()}))}
-function renderT(){let h=`<button class="btn" onclick="tf()">${form?'إغلاق':'＋ إضافة طالب'}</button>`;
+function renderT(){let h=`<div class="row"><button class="btn" onclick="tf()">${form?'إغلاق':'＋ إضافة طالب'}</button><button class="btn" style="background:var(--acc);color:#1b1500" onclick="togPay()">💰 السداد${npend()?' ('+npend()+')':''}</button></div>`;
  if(form)h+=`<div class="card"><input id="n" placeholder="اسم الطالب"><input id="cl" placeholder="الصف، مثل: الثالث"><input id="ph" inputmode="tel" placeholder="رقم واتساب الوالد، مثل 0912345678"><button class="btn" id="ab" onclick="add()">حفظ الطالب</button></div>`;
  if(nw)h+=`<div class="card"><h2>كود ولي أمر ${esc(nw.name)}</h2><div style="font-size:24px;font-weight:800;letter-spacing:2px;direction:ltr;text-align:center">${esc(nw.code)}</div><p class="hint">يظهر مرة واحدة فقط. أرسله للوالد الآن، وإن ضاع اضغط "كود جديد".</p><div class="row"><button class="btn wa" onclick="sendCode()">إرسال الكود للوالد</button><button class="btn off" onclick="hideNw()">إخفاء</button></div></div>`;
  $('mt').innerHTML=h}
@@ -98,7 +100,7 @@ const vis=s=>{const q=$('q').value.trim();return !q||s.name.includes(q)||s.cls.i
 function renderL(){let k=0,h=`<div class="card"><div class="top"><label class="ck"><input type="checkbox" id="all" onchange="selAll(this.checked)">تحديد الكل</label><span class="code" id="cnt"></span></div>`;
  S.forEach((s,i)=>{if(!vis(s))return;k++;const lv=s.level??2,ab=(s.att||{})[TD()];
   h+=`<div class="st"><div class="top"><input type="checkbox" class="cb" data-c="${s.id}" ${sel[s.id]?'checked':''} onchange="pick(this)"><div class="grow" onclick="tg(${i})"><b>${esc(s.name)}</b><div class="code">${esc(s.cls)}${ab?' · 🔴 غائب اليوم':''}</div></div><span class="chip l${lv}" onclick="tg(${i})">${LV[lv]}</span></div>`;
-  if(open===i)h+=`<div style="margin-top:8px"><textarea id="nt" rows="2" placeholder="ملاحظة عن الطالب (اختياري)"></textarea><select id="rl">${LV.map((l,j)=>`<option value="${j}" ${j===lv?'selected':''}>${l}</option>`).join('')}</select><div class="row"><button class="btn" onclick="rep(${i})">حفظ</button><button class="btn" style="background:var(--bad);color:#fff" onclick="absent(${i})">غائب اليوم</button></div><div class="code" style="margin-top:10px">واتساب: ${esc(s.phone)}</div><div class="row" style="margin-top:8px"><button class="btn off" onclick="regen(${i})">كود جديد</button><button class="btn del" onclick="del(${i})">حذف</button></div></div>`;
+  if(open===i)h+=`<div style="margin-top:8px"><textarea id="nt" rows="2" placeholder="ملاحظة عن الطالب (اختياري)"></textarea><select id="rl">${LV.map((l,j)=>`<option value="${j}" ${j===lv?'selected':''}>${l}</option>`).join('')}</select><div class="row"><button class="btn" onclick="rep(${i})">حفظ</button><button class="btn" style="background:var(--bad);color:#fff" onclick="absent(${i})">غائب اليوم</button></div><button class="btn" style="margin-top:8px;background:var(--acc);color:#1b1500" onclick="feeOpen(${i})">💳 رسوم</button><div class="code" style="margin-top:10px">واتساب: ${esc(s.phone)}</div><div class="row" style="margin-top:8px"><button class="btn off" onclick="regen(${i})">كود جديد</button><button class="btn del" onclick="del(${i})">حذف</button></div></div>`;
   h+='</div>'});
  if(!k)h+=`<div class="empty">${S.length?'لا توجد نتائج':'اضغط "إضافة طالب" لبدء القائمة'}</div>`;
  $('ls').innerHTML=h+'</div>';updC()}
@@ -142,17 +144,86 @@ function sendQ(id){const s=S.find(x=>x.id===id);let m=`السلام عليكم،
  done[id]=1;wl(s.phone,m+'\n- إدارة مؤسسة نورا التعليمية الخاصة');renderC()}
 
 /* ---------- ولي الأمر ---------- */
-function startParent(sid,uid){show('p');
+function startParent(sid,uid){show('p');PS=sid;PU=uid;un.push(onSnapshot(query(collection(db,'payments'),where('parentUid','==',uid)),q=>{PL=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.ts-a.ts);renderPay()}));
  un.push(onSnapshot(doc(db,'students',sid),d=>{P=d.exists()?d.data():null;renderP()}));
  un.push(onSnapshot(query(collection(db,'messages'),where('toUids','array-contains',uid)),s=>{MS=s.docs.map(d=>d.data()).sort((a,b)=>b.ts-a.ts);renderP()}))}
 function renderP(){if(!P){$('p').innerHTML='<div class="card"><div class="empty">جارٍ التحميل…</div></div>';return}
  const lv=P.level??2,ab=P.att||{},mo=TD().slice(0,7),ad=Object.keys(ab).filter(d=>d.startsWith(mo)).sort(),up=MS.filter(m=>m.mt&&m.mt.d>=TD()),rp=(P.reports||[]).slice().reverse();
  let h=`<div class="hero"><h2>${esc(P.name)}</h2><div>الصف: ${esc(P.cls)}</div><div style="margin-top:8px">المستوى الحالي: <b>${LV[lv]}</b>${ab[TD()]?' · غائب اليوم':''}</div></div>`;
+ const fees=MS.filter(m=>m.fee);
+ if(fees.length)h+=`<div class="card"><h2>💳 رسوم مطلوبة</h2>${fees.map(m=>`<div class="rep"><small>${fdt(m.ts)}</small>${m.fee.amount?`<div>المبلغ: <b>${esc(m.fee.amount)}</b></div>`:''}${m.fee.bank?`<div>البنك: ${esc(m.fee.bank)}</div>`:''}<div>رقم الحساب: <b dir="ltr">${esc(m.fee.acct)}</b> <button class="btn sm off" data-a="${esc(m.fee.acct)}" onclick="cp(this.dataset.a)">نسخ</button></div><div>اسم صاحب الحساب: <b>${esc(m.fee.holder)}</b></div>${m.fee.note?`<div>${esc(m.fee.note)}</div>`:''}</div>`).join('')}<p class="hint">بعد السداد ارفع صورة الإشعار من قسم "سداد الرسوم" أدناه.</p></div>`;
  if(up.length)h+=`<div class="card"><h2>اجتماعات قادمة</h2>${up.map(m=>`<div class="rep"><b>${esc(m.mt.ti)}</b><div>${esc(fd(m.mt.d))} · ${esc(m.mt.h)}</div>${m.mt.p?`<small>${esc(m.mt.p)}</small>`:''}</div>`).join('')}</div>`;
  if(ad.length)h+=`<div class="card"><h2>الغياب هذا الشهر: ${ad.length}</h2><div class="code">${ad.map(d=>esc(fd(d))).join('، ')}</div></div>`;
  if(rp.length)h+=`<div class="card"><h2>ملاحظات المدرسة</h2>${rp.map(x=>`<div class="rep"><small>${esc(new Date(x.ts).toLocaleDateString('ar'))} · ${LV[x.l]}</small><div>${esc(x.t)}</div></div>`).join('')}</div>`;
- h+=`<div class="card"><h2>رسائل المدرسة</h2>${MS.length?MS.map(m=>`<div class="rep"><small>${esc(new Date(m.ts).toLocaleDateString('ar'))}</small><div>${esc(m.t||(m.mt?'دعوة: '+m.mt.ti:''))}</div></div>`).join(''):'<div class="empty">لا توجد رسائل بعد</div>'}</div>`;
- $('p').innerHTML=h}
+ h+=`<div class="card"><h2>رسائل المدرسة</h2>${MS.filter(m=>!m.fee).length?MS.filter(m=>!m.fee).map(m=>`<div class="rep"><small>${esc(new Date(m.ts).toLocaleDateString('ar'))}</small><div>${esc(m.t||(m.mt?'دعوة: '+m.mt.ti:''))}</div></div>`).join(''):'<div class="empty">لا توجد رسائل بعد</div>'}</div>`;
+ $('p').innerHTML=h+'<div id="pay"></div>';renderPay()}
+
+
+/* ---------- السداد ---------- */
+let PY=[],payOpen=false,PF='pending',PL=[],PS='',PU='',pform=false,pimg='',PA='',PN='',pbusy=false;
+const SCH='مؤسسة نورا التعليمية الخاصة';
+const stl={pending:['قيد المراجعة','l2'],confirmed:['تم التأكيد','l0'],rejected:['مرفوض','l3']};
+const npend=()=>PY.filter(x=>x.status==='pending').length;
+const fdt=t=>new Date(t).toLocaleString('ar',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+async function compress(file){
+ const url=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)});
+ const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
+ let w=img.width,h=img.height,m=1100;if(Math.max(w,h)>m){const k=m/Math.max(w,h);w=Math.round(w*k);h=Math.round(h*k)}
+ const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+ let q=.7,d=c.toDataURL('image/jpeg',q);while(d.length>600000&&q>.35){q-=.1;d=c.toDataURL('image/jpeg',q)}
+ if(d.length>650000)throw new Error('big');return d}
+function renderPay(){const el=$('pay');if(!el)return;
+ let h=`<div class="card"><h2>💰 سداد الرسوم</h2>`;
+ if(!pform)h+=`<button class="btn" onclick="togPform()">＋ رفع إشعار سداد</button>`;
+ else h+=`<p class="hint" style="margin:0 0 6px">اختر صورة إشعار التحويل (من المعرض أو الكاميرا)</p><input type="file" accept="image/*" onchange="pickImg(this)">${pimg?`<img src="${pimg}" alt="" style="max-width:100%;border-radius:10px;margin-bottom:8px">`:''}<input placeholder="المبلغ (اختياري)" value="${esc(PA)}" oninput="setPA(this.value)"><input placeholder="ملاحظة (اختياري)" value="${esc(PN)}" oninput="setPN(this.value)"><div class="row"><button class="btn" ${pimg&&!pbusy?'':'disabled'} onclick="sendPay()">${pbusy?'جارٍ الإرسال…':'إرسال'}</button><button class="btn del" onclick="togPform()">إلغاء</button></div>`;
+ if(PL.length)h+='<div style="margin-top:12px">'+PL.map(x=>{const[lb,cl]=stl[x.status]||['—','l2'];return `<div class="rep"><div class="top"><small>${fdt(x.ts)}${x.amount?' · '+esc(x.amount):''}</small><span class="chip ${cl}">${lb}</span></div>${x.note?`<div>${esc(x.note)}</div>`:''}</div>`}).join('')+'</div>';
+ el.innerHTML=h+'</div>'}
+function togPform(){pform=!pform;if(!pform){pimg='';PA='';PN=''}renderPay()}
+async function pickImg(el){const f=el.files[0];if(!f)return;
+ try{pimg=await compress(f)}catch(e){pimg='';alert('تعذّر قراءة الصورة أو أنها كبيرة جداً، جرّب صورة أخرى')}
+ renderPay()}
+async function sendPay(){if(!pimg||pbusy)return;pbusy=true;renderPay();
+ try{const ref=doc(collection(db,'payments'));
+  await setDoc(doc(db,'paymentImgs',ref.id),{studentId:PS,parentUid:PU,img:pimg,ts:Date.now()});
+  await setDoc(ref,{studentId:PS,parentUid:PU,name:P.name,cls:P.cls,amount:PA.trim(),note:PN.trim(),ts:Date.now(),status:'pending'});
+  pform=false;pimg='';PA='';PN='';alert('تم إرسال إشعار السداد، وسيراجعه المسؤول.')}
+ catch(e){alert('تعذّر الإرسال: '+(e.code||e.message))}
+ pbusy=false;renderPay()}
+function togPay(){payOpen=!payOpen;renderPayAdmin()}
+function setPF(f){PF=f;renderPayAdmin()}
+function renderPayAdmin(){if(!payOpen){$('py').innerHTML='';return}
+ const L=PY.filter(x=>PF==='all'||x.status===PF);
+ let h=`<div class="card"><h2>إشعارات السداد</h2><div class="row" style="margin-bottom:8px;flex-wrap:wrap">${[['pending','قيد المراجعة'],['confirmed','مؤكد'],['rejected','مرفوض'],['all','الكل']].map(([k,l])=>`<button class="btn sm ${PF===k?'':'off'}" onclick="setPF('${k}')">${l}</button>`).join('')}</div>`;
+ L.forEach(x=>{const[lb,cl]=stl[x.status]||['—','l2'];
+  h+=`<div class="st"><div class="top"><div class="grow"><b>${esc(x.name)}</b><div class="code">${esc(x.cls)} · ${fdt(x.ts)}${x.amount?' · '+esc(x.amount):''}</div>${x.note?`<div class="code">${esc(x.note)}</div>`:''}</div><span class="chip ${cl}">${lb}</span></div><div class="row" style="margin-top:8px;flex-wrap:wrap"><button class="btn off" onclick="viewImg('${x.id}')">عرض الصورة</button>${x.status==='pending'?`<button class="btn wa" onclick="payAct('${x.id}','confirmed')">تأكيد</button><button class="btn del" onclick="payAct('${x.id}','rejected')">رفض</button>`:`<button class="btn del" onclick="delPay('${x.id}')">حذف</button>`}</div></div>`});
+ if(!L.length)h+='<div class="empty">لا توجد إشعارات</div>';
+ $('py').innerHTML=h+'<button class="btn off" style="margin-top:10px" onclick="togPay()">إغلاق</button></div>'}
+async function viewImg(id){$('ovi').src='';$('ov').hidden=false;$('ovt').textContent='جارٍ التحميل…';
+ try{const d=await getDoc(doc(db,'paymentImgs',id));if(!d.exists())throw 0;$('ovi').src=d.data().img;$('ovt').textContent=''}catch(e){$('ovt').textContent='تعذّر تحميل الصورة'}}
+const closeOv=()=>{$('ov').hidden=true};
+async function payAct(id,st){const x=PY.find(p=>p.id===id);if(!x)return;
+ try{await updateDoc(doc(db,'payments',id),{status:st,rev:Date.now()})}catch(e){alert('تعذّر الحفظ');return}
+ const s=S.find(z=>z.id===x.studentId);
+ if(s&&confirm('إبلاغ ولي الأمر بواتساب؟'))wl(s.phone,st==='confirmed'?`السلام عليكم، والد الطالب ${x.name}\nتم استلام إشعار السداد وتأكيده${x.amount?' ('+x.amount+')':''}. شكراً لكم.\n- إدارة ${SCH}`:`السلام عليكم، والد الطالب ${x.name}\nلم نتمكن من التحقق من إشعار السداد المرسل، نرجو إعادة إرسال صورة واضحة أو التواصل مع الإدارة.\n- إدارة ${SCH}`)}
+async function delPay(id){if(!confirm('حذف هذا الإشعار؟'))return;try{await deleteDoc(doc(db,'paymentImgs',id))}catch(e){}await deleteDoc(doc(db,'payments',id))}
+W({togPay,setPF,viewImg,closeOv,payAct,delPay,togPform,pickImg,sendPay,setPA:v=>{PA=v},setPN:v=>{PN=v}});
+
+
+/* ---------- طلب رسوم ---------- */
+let feeI=-1;
+function feeOpen(i){feeI=i;let d={};try{d=JSON.parse(localStorage.getItem('feeacct')||'{}')}catch(e){}
+ $('fmt').textContent='طلب سداد رسوم: '+S[i].name;$('fa').value='';$('fb').value=d.bank||'';$('fc').value=d.acct||'';$('fh').value=d.holder||'';$('fn').value='';$('fm').hidden=false}
+const feeClose=()=>{$('fm').hidden=true};
+async function feeSend(){const s=S[feeI];if(!s)return;
+ const f={amount:$('fa').value.trim(),bank:$('fb').value.trim(),acct:$('fc').value.trim(),holder:$('fh').value.trim(),note:$('fn').value.trim()};
+ if(!f.acct||!f.holder){alert('اكتب رقم الحساب واسم صاحب الحساب');return}
+ try{localStorage.setItem('feeacct',JSON.stringify({bank:f.bank,acct:f.acct,holder:f.holder}))}catch(e){}
+ try{await addDoc(collection(db,'messages'),{ts:Date.now(),t:'',toUids:[s.parentUid],mt:null,fee:f})}catch(e){alert('تعذّر الحفظ: '+(e.code||e.message));return}
+ feeClose();
+ const url=location.origin+location.pathname;
+ wl(s.phone,`السلام عليكم، والد الطالب ${s.name}\nطلب سداد رسوم دراسية${f.amount?'\nالمبلغ: '+f.amount:''}\n\nبيانات السداد:${f.bank?'\nالبنك: '+f.bank:''}\nرقم الحساب: ${f.acct}\nاسم صاحب الحساب: ${f.holder}${f.note?'\n'+f.note:''}\n\nبعد السداد يرجى رفع صورة الإشعار من التطبيق (قسم سداد الرسوم):\n${url}\n- إدارة ${SCH}`)}
+function cp(t){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>alert('تم نسخ رقم الحساب')).catch(()=>prompt('انسخ رقم الحساب:',t))}
+W({feeOpen,feeClose,feeSend,cp});
 
 W({doLogin,logout,renderL,selAll,pick,tg,tf,add,sendCode,regen,rep,absent,del,openC,closeC,tm,prep,sendQ,renderT,hideNw:()=>{nw=null;renderT()}});
 renderLG();
